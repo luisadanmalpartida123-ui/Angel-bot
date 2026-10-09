@@ -1,7 +1,17 @@
+const http = require('http');
 const { default: makeWASocket, useMultiFileAuthState, DisconnectReason } = require('@whiskeysockets/baileys');
 const axios = require('axios');
 const qrcode = require('qrcode-terminal');
 const fs = require('fs');
+
+// 1. Servidor HTTP para mantener activo el Web Service en Render
+const PORT = process.env.PORT || 3000;
+http.createServer((req, res) => {
+    res.writeHead(200, { 'Content-Type': 'text/plain' });
+    res.end('Bot Angel-KC activo 24/7');
+}).listen(PORT, () => {
+    console.log(`Servidor de salud corriendo en el puerto ${PORT}`);
+});
 
 // Archivo para guardar las colecciones de los usuarios
 const DB_FILE = './user_collections.json';
@@ -22,7 +32,6 @@ function saveDatabase() {
 
 // Función para obtener un personaje aleatorio desde AniList
 async function getRandomAnimeCharacter() {
-    // Generar una página aleatoria entre 1 y 100 para variedad de personajes
     const randomPage = Math.floor(Math.random() * 100) + 1;
     const query = `
     query ($page: Int) {
@@ -95,7 +104,7 @@ async function startBot() {
                 startBot();
             }
         } else if (connection === 'open') {
-            console.log('¡BOT ANGEL-KC CONECTADO CON ÉXITO!');
+            console.log('¡BOT ANGEL-KC CONECTADO CON ÉXITO Y LISTO!');
         }
     });
 
@@ -127,26 +136,19 @@ async function startBot() {
                 case 'menu':
                 case 'ayuda':
                     const menuText = `✨ *MENÚ DE COMANDOS - BOT ANGEL-KC* ✨\n\n` +
-                        `🎴 *Gacha / Anime:*
-` +
-                        `• `#claim` o `#gacha`: Obtén un personaje de anime aleatorio.
-` +
-                        `• `#mi-coleccion`: Mira los personajes que has reclamado.
-
-` +
-                        `🛠️ *Utilidades:*
-` +
-                        `• `#ping`: Verificar estado del bot.
-` +
-                        `• `#dado`: Lanzar un dado.
-` +
-                        `• `#menu`: Mostrar este menú.`;
+                        `🎴 *Gacha / Anime:*\n` +
+                        `• \`#claim\` o \`#gacha\`: Obtén un personaje de anime aleatorio.\n` +
+                        `• \`#mi-coleccion\`: Mira los personajes que has reclamado.\n\n` +
+                        `🛠️ *Utilidades:*\n` +
+                        `• \`#ping\`: Verificar estado del bot.\n` +
+                        `• \`#dado\`: Lanzar un dado.\n` +
+                        `• \`#menu\`: Mostrar este menú.`;
                     await sock.sendMessage(from, { text: menuText }, { quoted: msg });
                     break;
 
                 case 'claim':
                 case 'gacha':
-                    await sock.sendMessage(from, { text: '🔍 Buscando un personaje de anime en la base de datos...' }, { quoted: msg });
+                    await sock.sendMessage(from, { text: '🔍 Buscando un personaje de anime en AniList...' }, { quoted: msg });
                     
                     const char = await getRandomAnimeCharacter();
                     if (!char) {
@@ -154,7 +156,6 @@ async function startBot() {
                         break;
                     }
 
-                    // Guardar personaje en el archivo de usuario
                     if (!userCollections[sender]) {
                         userCollections[sender] = [];
                     }
@@ -171,9 +172,8 @@ async function startBot() {
                         `👤 *Nombre:* ${char.name}\n` +
                         `📺 *Anime:* ${char.anime}\n` +
                         `🆔 *ID:* ${char.id}\n\n` +
-                        `🎉 ¡Guardado en tu colección! Usa `#mi-coleccion` para ver tus personajes.`;
+                        `🎉 ¡Guardado en tu colección! Usa \`#mi-coleccion\` para ver tus personajes.`;
 
-                    // Enviar foto del personaje con texto
                     await sock.sendMessage(from, {
                         image: { url: char.image },
                         caption: responseText
@@ -184,7 +184,7 @@ async function startBot() {
                 case 'coleccion':
                     const userChars = userCollections[sender] || [];
                     if (userChars.length === 0) {
-                        await sock.sendMessage(from, { text: '🎒 Tu colección está vacía. Usa `#claim` para obtener tu primer personaje.' }, { quoted: msg });
+                        await sock.sendMessage(from, { text: '🎒 Tu colección está vacía. Usa \`#claim\` para obtener tu primer personaje.' }, { quoted: msg });
                         break;
                     }
 
