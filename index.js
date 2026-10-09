@@ -4,7 +4,7 @@ const axios = require('axios');
 const fs = require('fs');
 
 // ⚠️ ESCRIBE AQUÍ TU NÚMERO DE TELÉFONO (Con código de país, ej: Perú 51999999999)
-const NUMERO_TELEFONO = "51XXXXXXXXX"; 
+const NUMERO_TELEFONO = "51926342404"; 
 
 // Servidor HTTP para Render (evita el error de puertos)
 const PORT = process.env.PORT || 3000;
