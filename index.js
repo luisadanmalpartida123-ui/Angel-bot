@@ -1,115 +1,79 @@
 const { default: makeWASocket, useMultiFileAuthState, DisconnectReason } = require('@whiskeysockets/baileys');
-const qrcode = require('qrcode-terminal');
 const axios = require('axios');
+const qrcode = require('qrcode-terminal');
+const fs = require('fs');
 
-// Imagen del menú principal
-const IMAGEN_MENU = 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ3WIkECPSy4v-SW4xQHKmKgNT4SIIBRP9TS0ilJ10HjA&s=10';
+// Archivo para guardar las colecciones de los usuarios
+const DB_FILE = './user_collections.json';
 
-// Lista de los 100 Personajes de Anime exactos
-const listaPersonajes = [
-    { nombre: "Angel Devil", anime: "Chainsaw Man", genero: "Masculino / Demonio", valor: 1500 },
-    { nombre: "Power", anime: "Chainsaw Man", genero: "Femenino", valor: 1200 },
-    { nombre: "Makima", anime: "Chainsaw Man", genero: "Femenino", valor: 2500 },
-    { nombre: "Denji", anime: "Chainsaw Man", genero: "Masculino", valor: 1000 },
-    { nombre: "Aki Hayakawa", anime: "Chainsaw Man", genero: "Masculino", valor: 1100 },
-    { nombre: "Son Goku", anime: "Dragon Ball Z", genero: "Masculino", valor: 3000 },
-    { nombre: "Vegeta", anime: "Dragon Ball Z", genero: "Masculino", valor: 2800 },
-    { nombre: "Gohan", anime: "Dragon Ball Z", genero: "Masculino", valor: 2000 },
-    { nombre: "Naruto Uzumaki", anime: "Naruto", genero: "Masculino", valor: 2500 },
-    { nombre: "Sasuke Uchiha", anime: "Naruto", genero: "Masculino", valor: 2400 },
-    { nombre: "Kakashi Hatake", anime: "Naruto", genero: "Masculino", valor: 2200 },
-    { nombre: "Sakura Haruno", anime: "Naruto", genero: "Femenino", valor: 900 },
-    { nombre: "Itachi Uchiha", anime: "Naruto", genero: "Masculino", valor: 2900 },
-    { nombre: "Monkey D. Luffy", anime: "One Piece", genero: "Masculino", valor: 3000 },
-    { nombre: "Roronoa Zoro", anime: "One Piece", genero: "Masculino", valor: 2700 },
-    { nombre: "Nami", anime: "One Piece", genero: "Femenino", valor: 1300 },
-    { nombre: "Sanji", anime: "One Piece", genero: "Masculino", valor: 2100 },
-    { nombre: "Nico Robin", anime: "One Piece", genero: "Femenino", valor: 1800 },
-    { nombre: "Satoru Gojo", anime: "Jujutsu Kaisen", genero: "Masculino", valor: 3000 },
-    { nombre: "Yuji Itadori", anime: "Jujutsu Kaisen", genero: "Masculino", valor: 1500 },
-    { nombre: "Megumi Fushiguro", anime: "Jujutsu Kaisen", genero: "Masculino", valor: 1700 },
-    { nombre: "Nobara Kugisaki", anime: "Jujutsu Kaisen", genero: "Femenino", valor: 1200 },
-    { nombre: "Sukuna", anime: "Jujutsu Kaisen", genero: "Masculino / Maldición", valor: 2900 },
-    { nombre: "Tanjiro Kamado", anime: "Demon Slayer", genero: "Masculino", valor: 2000 },
-    { nombre: "Nezuko Kamado", anime: "Demon Slayer", genero: "Femenino", valor: 2200 },
-    { nombre: "Zenitsu Agatsuma", anime: "Demon Slayer", genero: "Masculino", valor: 1400 },
-    { nombre: "Inosuke Hashibira", anime: "Demon Slayer", genero: "Masculino", valor: 1400 },
-    { nombre: "Kyojuro Rengoku", anime: "Demon Slayer", genero: "Masculino", valor: 2600 },
-    { nombre: "Eren Yeager", anime: "Attack on Titan", genero: "Masculino", valor: 2700 },
-    { nombre: "Mikasa Ackerman", anime: "Attack on Titan", genero: "Femenino", valor: 2500 },
-    { nombre: "Levi Ackerman", anime: "Attack on Titan", genero: "Masculino", valor: 3000 },
-    { nombre: "Armin Arlert", anime: "Attack on Titan", genero: "Masculino", valor: 1600 },
-    { nombre: "Saitama", anime: "One Punch Man", genero: "Masculino", valor: 3000 },
-    { nombre: "Genos", anime: "One Punch Man", genero: "Masculino / Cyborg", valor: 1900 },
-    { nombre: "Tatsumaki", anime: "One Punch Man", genero: "Femenino", valor: 2400 },
-    { nombre: "Light Yagami", anime: "Death Note", genero: "Masculino", valor: 2300 },
-    { nombre: "L Lawliet", anime: "Death Note", genero: "Masculino", valor: 2500 },
-    { nombre: "Misa Amane", anime: "Death Note", genero: "Femenino", valor: 1100 },
-    { nombre: "Ryuk", anime: "Death Note", genero: "Shinigami", valor: 2000 },
-    { nombre: "Killua Zoldyck", anime: "Hunter x Hunter", genero: "Masculino", valor: 2700 },
-    { nombre: "Gon Freecss", anime: "Hunter x Hunter", genero: "Masculino", valor: 2200 },
-    { nombre: "Hisoka Morow", anime: "Hunter x Hunter", genero: "Masculino", valor: 2400 },
-    { nombre: "Kurapika", anime: "Hunter x Hunter", genero: "Masculino", valor: 2100 },
-    { nombre: "Izuku Midoriya", anime: "My Hero Academia", genero: "Masculino", valor: 1900 },
-    { nombre: "Katsuki Bakugo", anime: "My Hero Academia", genero: "Masculino", valor: 2000 },
-    { nombre: "Shoto Todoroki", anime: "My Hero Academia", genero: "Masculino", valor: 2100 },
-    { nombre: "All Might", anime: "My Hero Academia", genero: "Masculino", valor: 2600 },
-    { nombre: "Ochaco Uraraka", anime: "My Hero Academia", genero: "Femenino", valor: 1200 },
-    { nombre: "Ken Kaneki", anime: "Tokyo Ghoul", genero: "Masculino", valor: 2400 },
-    { nombre: "Touka Kirishima", anime: "Tokyo Ghoul", genero: "Femenino", valor: 1700 }
-];
-
-// Generar hasta 100 personajes
-const personajes100 = [];
-for (let i = 0; i < 100; i++) {
-    const base = listaPersonajes[i % listaPersonajes.length];
-    personajes100.push({
-        id: i + 1,
-        nombre: i >= 50 ? `${base.nombre} (SSR #${i + 1})` : base.nombre,
-        nombreBusqueda: base.nombre,
-        anime: base.anime,
-        genero: base.genero,
-        valor: base.valor + (i * 10)
-    });
+// Cargar o inicializar la base de datos de usuarios
+let userCollections = {};
+if (fs.existsSync(DB_FILE)) {
+    try {
+        userCollections = JSON.parse(fs.readFileSync(DB_FILE, 'utf-8'));
+    } catch (e) {
+        userCollections = {};
+    }
 }
 
-// Función para buscar la FOTO OFICIAL del personaje en AniList
-async function buscarFotoOficialBuffer(nombrePersonaje) {
+function saveDatabase() {
+    fs.writeFileSync(DB_FILE, JSON.stringify(userCollections, null, 2));
+}
+
+// Función para obtener un personaje aleatorio desde AniList
+async function getRandomAnimeCharacter() {
+    // Generar una página aleatoria entre 1 y 100 para variedad de personajes
+    const randomPage = Math.floor(Math.random() * 100) + 1;
     const query = `
-    query ($search: String) {
-      Character (search: $search) {
-        image {
-          large
+    query ($page: Int) {
+      Page(page: $page, perPage: 1) {
+        characters(sort: FAVOURITES_DESC) {
+          id
+          name {
+            full
+            native
+          }
+          image {
+            large
+          }
+          media(perPage: 1) {
+            nodes {
+              title {
+                romaji
+                english
+              }
+            }
+          }
         }
       }
-    }`;
+    }
+    `;
 
     try {
         const response = await axios.post('https://graphql.anilist.co', {
             query: query,
-            variables: { search: nombrePersonaje }
+            variables: { page: randomPage }
         });
 
-        const imageUrl = response.data?.data?.Character?.image?.large;
-        if (imageUrl) {
-            const imgRes = await axios.get(imageUrl, { responseType: 'arraybuffer' });
-            return Buffer.from(imgRes.data);
+        const character = response.data?.data?.Page?.characters[0];
+        if (character) {
+            const animeTitle = character.media?.nodes[0]?.title?.english || character.media?.nodes[0]?.title?.romaji || 'Anime Desconocido';
+            return {
+                id: character.id,
+                name: character.name.full,
+                anime: animeTitle,
+                image: character.image.large
+            };
         }
-    } catch (e) {
-        console.log('No se pudo obtener imagen oficial, usando respaldo.');
+    } catch (error) {
+        console.error('Error al consultar AniList:', error.message);
     }
-
-    // Imagen de respaldo por si falla la conexión
-    const res = await axios.get(IMAGEN_MENU, { responseType: 'arraybuffer' });
-    return Buffer.from(res.data);
+    return null;
 }
-
-const ultimasTiradas = {};
-const inventarios = {};
 
 async function startBot() {
     const { state, saveCreds } = await useMultiFileAuthState('auth_info');
-    
+
     const sock = makeWASocket({
         auth: state,
         printQRInTerminal: true
@@ -119,132 +83,118 @@ async function startBot() {
 
     sock.ev.on('connection.update', (update) => {
         const { connection, lastDisconnect, qr } = update;
+
         if (qr) {
-            console.log('\n--- ESCANEA ESTE CÓDIGO QR ---');
             qrcode.generate(qr, { small: true });
         }
 
         if (connection === 'close') {
-            const shouldReconnect = (lastDisconnect.error?.output?.statusCode !== DisconnectReason.loggedOut);
+            const shouldReconnect = lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut;
             console.log('Conexión cerrada. Reconectando...', shouldReconnect);
-            if (shouldReconnect) startBot();
+            if (shouldReconnect) {
+                startBot();
+            }
         } else if (connection === 'open') {
-            console.log('¡BOT CONECTADO CON ÉXITO Y LISTO!');
+            console.log('¡BOT ANGEL-KC CONECTADO CON ÉXITO!');
         }
     });
 
-    sock.ev.on('messages.upsert', async (m) => {
-        const msg = m.messages[0];
-        if (!msg.message || msg.key.fromMe) return;
+    sock.ev.on('messages.upsert', async ({ messages, type }) => {
+        if (type !== 'notify') return;
 
-        const jid = msg.key.remoteJid;
-        const sender = msg.key.participant || msg.key.remoteJid;
-        const text = msg.message.conversation || msg.message.extendedTextMessage?.text || '';
-        const command = text.toLowerCase().trim();
+        for (const msg of messages) {
+            if (!msg.message || msg.key.fromMe) continue;
 
-        // 1. Comando #ping
-        if (command === '#ping') {
-            const start = Date.now();
-            const latency = Date.now() - start;
-            await sock.sendMessage(jid, { text: `🏓 *Pong!* Latencia: *${latency}ms*.` }, { quoted: msg });
-        }
+            const from = msg.key.remoteJid;
+            const text = msg.message.conversation || msg.message.extendedTextMessage?.text || '';
+            const sender = msg.key.participant || from;
 
-        // 2. Comando #dado
-        if (command === '#dado') {
-            const numeroDado = Math.floor(Math.random() * 6) + 1;
-            const emojis = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣'];
-            await sock.sendMessage(jid, { text: `🎲 Resultó: *${numeroDado}* ${emojis[numeroDado - 1]}` }, { quoted: msg });
-        }
+            if (!text.startsWith('#')) continue;
 
-        // 3. SECCIÓN GACHA: Comando #gacha
-        if (command === '#gacha') {
-            const randomIdx = Math.floor(Math.random() * personajes100.length);
-            const p = personajes100[randomIdx];
+            const args = text.slice(1).trim().split(/ +/);
+            const command = args.shift().toLowerCase();
 
-            ultimasTiradas[jid] = p;
+            switch (command) {
+                case 'ping':
+                    await sock.sendMessage(from, { text: '🏓 ¡Pong! El bot Angel-KC está activo 24/7.' }, { quoted: msg });
+                    break;
 
-            const caption = `✨ *TIRADA GACHA ANIME* ✨\n\n` +
-                `👤 *Nombre:* ${p.nombre}\n` +
-                `📺 *Anime:* ${p.anime}\n` +
-                `🚻 *Género:* ${p.genero}\n` +
-                `💰 *Valor:* $${p.valor}\n\n` +
-                `👉 *Escribe "#claim" para reclamar y guardar a este personaje en tu colección.*`;
+                case 'dado':
+                    const dado = Math.floor(Math.random() * 6) + 1;
+                    await sock.sendMessage(from, { text: `🎲 Lanzaste el dado y salió: *${dado}*` }, { quoted: msg });
+                    break;
 
-            try {
-                // Obtiene la foto real del personaje desde AniList
-                const imageBuffer = await buscarFotoOficialBuffer(p.nombreBusqueda);
-                await sock.sendMessage(jid, {
-                    image: imageBuffer,
-                    caption: caption
-                }, { quoted: msg });
-            } catch (err) {
-                await sock.sendMessage(jid, { text: caption }, { quoted: msg });
-            }
-        }
+                case 'menu':
+                case 'ayuda':
+                    const menuText = `✨ *MENÚ DE COMANDOS - BOT ANGEL-KC* ✨\n\n` +
+                        `🎴 *Gacha / Anime:*
+` +
+                        `• `#claim` o `#gacha`: Obtén un personaje de anime aleatorio.
+` +
+                        `• `#mi-coleccion`: Mira los personajes que has reclamado.
 
-        // 4. SECCIÓN GACHA: Comando #claim
-        if (command === '#claim') {
-            const personajeDisponible = ultimasTiradas[jid];
+` +
+                        `🛠️ *Utilidades:*
+` +
+                        `• `#ping`: Verificar estado del bot.
+` +
+                        `• `#dado`: Lanzar un dado.
+` +
+                        `• `#menu`: Mostrar este menú.`;
+                    await sock.sendMessage(from, { text: menuText }, { quoted: msg });
+                    break;
 
-            if (!personajeDisponible) {
-                return await sock.sendMessage(jid, { text: `⚠️ *No hay ningún personaje disponible para reclamar.* Primero tira con el comando *#gacha*.` }, { quoted: msg });
-            }
+                case 'claim':
+                case 'gacha':
+                    await sock.sendMessage(from, { text: '🔍 Buscando un personaje de anime en la base de datos...' }, { quoted: msg });
+                    
+                    const char = await getRandomAnimeCharacter();
+                    if (!char) {
+                        await sock.sendMessage(from, { text: '❌ Ocurrió un error al obtener el personaje. Intenta de nuevo.' }, { quoted: msg });
+                        break;
+                    }
 
-            if (!inventarios[sender]) {
-                inventarios[sender] = [];
-            }
+                    // Guardar personaje en el archivo de usuario
+                    if (!userCollections[sender]) {
+                        userCollections[sender] = [];
+                    }
 
-            inventarios[sender].push(personajeDisponible);
-            delete ultimasTiradas[jid];
+                    userCollections[sender].push({
+                        id: char.id,
+                        name: char.name,
+                        anime: char.anime,
+                        date: new Date().toLocaleDateString()
+                    });
+                    saveDatabase();
 
-            await sock.sendMessage(jid, {
-                text: `🎉 ¡Felicidades! Has reclamado con éxito a *${personajeDisponible.nombre}* de *${personajeDisponible.anime}* ($${personajeDisponible.valor}). Usa *#mi-coleccion* para ver tus personajes.`
-            }, { quoted: msg });
-        }
+                    const responseText = `✨ *¡PERSONAJE OBTENIDO!* ✨\n\n` +
+                        `👤 *Nombre:* ${char.name}\n` +
+                        `📺 *Anime:* ${char.anime}\n` +
+                        `🆔 *ID:* ${char.id}\n\n` +
+                        `🎉 ¡Guardado en tu colección! Usa `#mi-coleccion` para ver tus personajes.`;
 
-        // 5. SECCIÓN GACHA: Comando #mi-coleccion
-        if (command === '#mi-coleccion' || command === '#coleccion') {
-            const misPersonajes = inventarios[sender] || [];
+                    // Enviar foto del personaje con texto
+                    await sock.sendMessage(from, {
+                        image: { url: char.image },
+                        caption: responseText
+                    }, { quoted: msg });
+                    break;
 
-            if (misPersonajes.length === 0) {
-                return await sock.sendMessage(jid, { text: `🎒 *Tu inventario está vacío.* Usa *#gacha* y luego *#claim* para reclamar personajes.` }, { quoted: msg });
-            }
+                case 'mi-coleccion':
+                case 'coleccion':
+                    const userChars = userCollections[sender] || [];
+                    if (userChars.length === 0) {
+                        await sock.sendMessage(from, { text: '🎒 Tu colección está vacía. Usa `#claim` para obtener tu primer personaje.' }, { quoted: msg });
+                        break;
+                    }
 
-            let lista = `🎒 *TU COLECCIÓN DE PERSONAJES (${misPersonajes.length})*:\n\n`;
-            let totalValor = 0;
+                    let listText = `🎒 *TU COLECCIÓN DE PERSONAJES (${userChars.length}):*\n\n`;
+                    userChars.forEach((c, idx) => {
+                        listText += `${idx + 1}. *${c.name}* (${c.anime})\n`;
+                    });
 
-            misPersonajes.forEach((p, idx) => {
-                lista += `${idx + 1}. *${p.nombre}* (${p.anime}) - $${p.valor}\n`;
-                totalValor += p.valor;
-            });
-
-            lista += `\n💎 *Valor total de tu colección:* $${totalValor}`;
-
-            await sock.sendMessage(jid, { text: lista }, { quoted: msg });
-        }
-
-        // 6. Comando #menu
-        if (command === '#menu') {
-            const caption = `¡Hola! Soy Angel-KC (Pre-Bot)\n\n` +
-                `AQUÍ TIENES LA LISTA DE COMANDOS:\n\n` +
-                `⚙️ *COMANDOS GENERALES:*\n` +
-                `- #ping : Muestra la velocidad del bot\n` +
-                `- #dado : Lanza un dado al azar (1-6)\n` +
-                `- #menu : Muestra esta lista\n\n` +
-                `🎰 *APARTADO GACHA (ANIME):*\n` +
-                `- #gacha : Tira por un personaje al azar de 100 disponibles\n` +
-                `- #claim : Reclama el personaje obtenido en el último #gacha\n` +
-                `- #mi-coleccion : Revisa tu lista de personajes reclamados\n\n` +
-                `• CANAL OFICIAL:\njijijaja...`;
-
-            try {
-                const res = await axios.get(IMAGEN_MENU, { responseType: 'arraybuffer' });
-                await sock.sendMessage(jid, {
-                    image: Buffer.from(res.data),
-                    caption: caption
-                }, { quoted: msg });
-            } catch (err) {
-                await sock.sendMessage(jid, { text: caption }, { quoted: msg });
+                    await sock.sendMessage(from, { text: listText }, { quoted: msg });
+                    break;
             }
         }
     });
